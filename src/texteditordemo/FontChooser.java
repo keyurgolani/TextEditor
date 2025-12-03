@@ -1,69 +1,98 @@
 package texteditordemo;
 
-import java.awt.Font;
-import java.awt.GraphicsEnvironment;
-import javax.swing.DefaultListModel;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JList;
-import javax.swing.JScrollPane;
-import javax.swing.ListSelectionModel;
+import java.awt.*;
+import javax.swing.*;
 
 /**
- * Dialog for selecting font families.
+ * Modern dialog for selecting font families.
  *
  * @author Keyur
  */
 public class FontChooser extends JDialog {
     
     private final JList<String> fontList;
-    private static String selectedFont;
-    private static String previousFont;
+    private String selectedFont;
+    private final String previousFont;
 
     public FontChooser(JFrame parent, Font previousFont) {
-        FontChooser.previousFont = previousFont.getName();
-        setLayout(null);
-        setSize(400, 400);
-        setModal(true);
+        super(parent, "Choose Font", true);
+        this.previousFont = previousFont.getName();
+        this.selectedFont = this.previousFont;
+        
+        // Use modern layout manager instead of null layout
+        setLayout(new BorderLayout(10, 10));
+        setSize(450, 500);
         setResizable(false);
-        setTitle("Choose Font");
         setLocationRelativeTo(parent);
         
+        // Create font list with modern styling
         var fontListModel = new DefaultListModel<String>();
-        fontList = new JList<>(fontListModel);
         var graphicsEnvironment = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        String[] fonts = graphicsEnvironment.getAvailableFontFamilyNames();
-        for (String font : fonts) {
+        var fonts = graphicsEnvironment.getAvailableFontFamilyNames();
+        for (var font : fonts) {
             fontListModel.addElement(font);
         }
+        
+        fontList = new JList<>(fontListModel);
         fontList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         fontList.setLayoutOrientation(JList.VERTICAL);
         fontList.setVisibleRowCount(-1);
+        fontList.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        
+        // Set initial selection to current font
+        fontList.setSelectedValue(this.previousFont, true);
+        
+        // Add custom cell renderer to show fonts in their own style
+        fontList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, 
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                var label = (JLabel) super.getListCellRendererComponent(
+                    list, value, index, isSelected, cellHasFocus);
+                try {
+                    label.setFont(new Font(value.toString(), Font.PLAIN, 12));
+                } catch (Exception e) {
+                    // If font can't be loaded, use default
+                }
+                return label;
+            }
+        });
+        
         var fontScrollPane = new JScrollPane(fontList);
-        fontScrollPane.setBounds(10, 10, 374, 301);
-        add(fontScrollPane);
+        fontScrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(fontScrollPane, BorderLayout.CENTER);
+        
+        // Create button panel with modern layout
+        var buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
         
         var okButton = new JButton("OK");
+        okButton.setPreferredSize(new Dimension(100, 35));
         okButton.addActionListener(e -> {
-            selectedFont = fontList.getSelectedValue();
+            var selected = fontList.getSelectedValue();
+            if (selected != null) {
+                selectedFont = selected;
+            }
             setVisible(false);
         });
-        okButton.setBounds(50, 326, 100, 30);
-        add(okButton);
         
         var cancelButton = new JButton("Cancel");
+        cancelButton.setPreferredSize(new Dimension(100, 35));
         cancelButton.addActionListener(e -> {
-            selectedFont = FontChooser.previousFont;
+            selectedFont = this.previousFont;
             setVisible(false);
         });
-        cancelButton.setBounds(224, 326, 100, 30);
-        add(cancelButton);
+        
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Set OK as default button
+        getRootPane().setDefaultButton(okButton);
         
         setVisible(true);
     }
     
-    public static String getSelectedFont() {
+    public String getSelectedFont() {
         return selectedFont;
     }
 }

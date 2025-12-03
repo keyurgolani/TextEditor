@@ -14,13 +14,13 @@ import javax.swing.undo.UndoManager;
 
 /**
  * Main text editor window with full editing capabilities.
+ * Modernized for Java 17+ with contemporary UI design.
  *
  * @author Keyur
  */
-public class TextEditor extends JFrame implements ActionListener, ClipboardOwner, ComponentListener {
+public class TextEditor extends JFrame implements ActionListener, ClipboardOwner {
     
     private JPopupMenu rightClickMenu;
-    private JMenuBar menuBar;
     private JTextArea textArea;
     private JMenuItem newItem, openItem, saveItem, saveAsItem, exitItem;
     private JMenuItem undoItem, redoItem, cutItem, copyItem, pasteItem, deleteItem, selectAllItem, dateAndTimeItem;
@@ -33,11 +33,10 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
     private int selectedLength;
     private final JFileChooser fileChooser = new JFileChooser();
     private final UndoManager undoManager = new UndoManager();
-    private Rectangle window;
     private final String title = "Untitled";
-    private JScrollPane textAreaScrollPane;
 
     public TextEditor() throws HeadlessException {
+        initializeLookAndFeel();
         setTitle(title);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
@@ -46,60 +45,70 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
                 handleWindowClosing();
             }
         });
-        setSize(600, 600);
-        addComponentListener(this);
-        window = getBounds();
-        setLayout(null);
-        add(makeMenu());
+        setSize(800, 600);
+        setMinimumSize(new Dimension(600, 400));
+        setLocationRelativeTo(null);
         
+        // Use BorderLayout for modern layout management
+        setLayout(new BorderLayout());
+        setJMenuBar(createMenuBar());
+        
+        // Initialize text area with modern styling
         textArea = new JTextArea();
-        textArea.setFont(new Font("Consolas", Font.PLAIN, 15));
+        textArea.setFont(new Font("Consolas", Font.PLAIN, 14));
         textArea.setWrapStyleWord(true);
+        textArea.setLineWrap(true);
+        textArea.setMargin(new Insets(5, 5, 5, 5));
+        
+        // Add modern caret listener
         textArea.addCaretListener(e -> {
             selectedLength = textArea.getSelectionEnd() - textArea.getSelectionStart();
-            if (selectedLength != 0) {
-                cutItem.setEnabled(true);
-                copyItem.setEnabled(true);
-                deleteItem.setEnabled(true);
-                titleCaseItem.setEnabled(true);
-                upperCaseItem.setEnabled(true);
-                lowerCaseItem.setEnabled(true);
-                popupCutItem.setEnabled(true);
-                popupCopyItem.setEnabled(true);
-                popupDeleteItem.setEnabled(true);
-            }
+            var hasSelection = selectedLength != 0;
+            cutItem.setEnabled(hasSelection);
+            copyItem.setEnabled(hasSelection);
+            deleteItem.setEnabled(hasSelection);
+            titleCaseItem.setEnabled(hasSelection);
+            upperCaseItem.setEnabled(hasSelection);
+            lowerCaseItem.setEnabled(hasSelection);
+            popupCutItem.setEnabled(hasSelection);
+            popupCopyItem.setEnabled(hasSelection);
+            popupDeleteItem.setEnabled(hasSelection);
         });
+        
+        // Add undo/redo support
         textArea.getDocument().addUndoableEditListener(e -> {
             undoManager.addEdit(e.getEdit());
             undoItem.setEnabled(true);
             popupUndoItem.setEnabled(true);
         });
+        
+        // Document listener for save/select all menu items
         textArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                if (!textArea.getText().isEmpty()) {
-                    saveItem.setEnabled(true);
-                    saveAsItem.setEnabled(true);
-                    selectAllItem.setEnabled(true);
-                    popupSelectAllItem.setEnabled(true);
-                }
+                updateMenuState();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                if (textArea.getText().isEmpty()) {
-                    saveItem.setEnabled(false);
-                    saveAsItem.setEnabled(false);
-                    selectAllItem.setEnabled(false);
-                    popupSelectAllItem.setEnabled(false);
-                }
+                updateMenuState();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 // Not needed for plain text components
             }
+            
+            private void updateMenuState() {
+                var hasText = !textArea.getText().isEmpty();
+                saveItem.setEnabled(hasText);
+                saveAsItem.setEnabled(hasText);
+                selectAllItem.setEnabled(hasText);
+                popupSelectAllItem.setEnabled(hasText);
+            }
         });
+        
+        // Add context menu support
         textArea.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -118,9 +127,29 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
             }
         });
         
-        textAreaScrollPane = new JScrollPane(textArea);
-        textAreaScrollPane.setBounds(0, 30, window.width - 16, window.height - 30 - 39);
-        add(textAreaScrollPane);
+        // Add text area with scroll pane using BorderLayout
+        var scrollPane = new JScrollPane(textArea);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        add(scrollPane, BorderLayout.CENTER);
+    }
+    
+    /**
+     * Initialize modern look and feel for the application.
+     */
+    private void initializeLookAndFeel() {
+        try {
+            // Try to use system look and feel for native appearance
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            
+            // Set modern UI defaults
+            UIManager.put("Button.arc", 8);
+            UIManager.put("Component.arc", 8);
+            UIManager.put("TextComponent.arc", 8);
+        } catch (Exception ex) {
+            Logger.getLogger(TextEditor.class.getName()).log(Level.WARNING, 
+                "Could not set system look and feel", ex);
+        }
     }
     
     private void handleWindowClosing() {
@@ -170,31 +199,27 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
         return content.toString();
     }
     
-    private JMenuBar makeMenu() {
-        menuBar = new JMenuBar();
+    /**
+     * Create the menu bar with modern keyboard shortcuts.
+     */
+    private JMenuBar createMenuBar() {
+        var menuBar = new JMenuBar();
         rightClickMenu = new JPopupMenu();
-        menuBar.setBounds(0, 0, window.width, 30);
         
+        // File Menu
         var fileMenu = new JMenu("File");
+        fileMenu.setMnemonic(KeyEvent.VK_F);
         menuBar.add(fileMenu);
-        var editMenu = new JMenu("Edit");
-        menuBar.add(editMenu);
-        var formatMenu = new JMenu("Format");
-        menuBar.add(formatMenu);
-        var helpMenu = new JMenu("Help");
-        menuBar.add(helpMenu);
         
-        newItem = new JMenuItem("New");
-        openItem = new JMenuItem("Open");
-        saveItem = new JMenuItem("Save");
-        saveAsItem = new JMenuItem("Save As");
-        exitItem = new JMenuItem("Exit", KeyEvent.VK_ESCAPE);
-        
-        newItem.addActionListener(this);
-        openItem.addActionListener(this);
-        saveItem.addActionListener(this);
-        saveAsItem.addActionListener(this);
-        exitItem.addActionListener(this);
+        newItem = createMenuItem("New", KeyEvent.VK_N, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_N, InputEvent.CTRL_DOWN_MASK));
+        openItem = createMenuItem("Open", KeyEvent.VK_O, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_O, InputEvent.CTRL_DOWN_MASK));
+        saveItem = createMenuItem("Save", KeyEvent.VK_S, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK));
+        saveAsItem = createMenuItem("Save As", KeyEvent.VK_A, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_S, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK));
+        exitItem = createMenuItem("Exit", KeyEvent.VK_X, null);
         
         fileMenu.add(newItem);
         fileMenu.add(openItem);
@@ -207,23 +232,27 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
         saveItem.setEnabled(false);
         saveAsItem.setEnabled(false);
         
-        undoItem = new JMenuItem("Undo", 'Z');
-        redoItem = new JMenuItem("Redo", 'Y');
-        cutItem = new JMenuItem("Cut", 'X');
-        copyItem = new JMenuItem("Copy", 'C');
-        pasteItem = new JMenuItem("Paste", 'V');
-        deleteItem = new JMenuItem("Delete", KeyEvent.VK_DELETE);
-        selectAllItem = new JMenuItem("Select All", 'A');
-        dateAndTimeItem = new JMenuItem("Date & Time");
+        // Edit Menu
+        var editMenu = new JMenu("Edit");
+        editMenu.setMnemonic(KeyEvent.VK_E);
+        menuBar.add(editMenu);
         
-        undoItem.addActionListener(this);
-        redoItem.addActionListener(this);
-        cutItem.addActionListener(this);
-        copyItem.addActionListener(this);
-        pasteItem.addActionListener(this);
-        deleteItem.addActionListener(this);
-        selectAllItem.addActionListener(this);
-        dateAndTimeItem.addActionListener(this);
+        undoItem = createMenuItem("Undo", KeyEvent.VK_U, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK));
+        redoItem = createMenuItem("Redo", KeyEvent.VK_R, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_Y, InputEvent.CTRL_DOWN_MASK));
+        cutItem = createMenuItem("Cut", KeyEvent.VK_T, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_X, InputEvent.CTRL_DOWN_MASK));
+        copyItem = createMenuItem("Copy", KeyEvent.VK_C, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_C, InputEvent.CTRL_DOWN_MASK));
+        pasteItem = createMenuItem("Paste", KeyEvent.VK_P, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_V, InputEvent.CTRL_DOWN_MASK));
+        deleteItem = createMenuItem("Delete", KeyEvent.VK_D, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0));
+        selectAllItem = createMenuItem("Select All", KeyEvent.VK_A, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_A, InputEvent.CTRL_DOWN_MASK));
+        dateAndTimeItem = createMenuItem("Date & Time", KeyEvent.VK_I, 
+            KeyStroke.getKeyStroke(KeyEvent.VK_F5, 0));
         
         editMenu.add(undoItem);
         editMenu.add(redoItem);
@@ -244,37 +273,35 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
         copyItem.setEnabled(false);
         deleteItem.setEnabled(false);
         
-        fontItem = new JMenuItem("Font", 'F');
-        sizeItem = new JMenuItem("Size");
-        foregroundColorItem = new JMenuItem("Text Color");
-        backgroundColorItem = new JMenuItem("Background Color");
-        wrapItem = new JCheckBoxMenuItem("Text Wrap");
-        wrapItem.setSelected(true);
+        // Format Menu
+        var formatMenu = new JMenu("Format");
+        formatMenu.setMnemonic(KeyEvent.VK_O);
+        menuBar.add(formatMenu);
         
-        fontItem.addActionListener(this);
-        sizeItem.addActionListener(this);
-        foregroundColorItem.addActionListener(this);
-        backgroundColorItem.addActionListener(this);
+        fontItem = createMenuItem("Font", KeyEvent.VK_F, null);
+        sizeItem = createMenuItem("Size", KeyEvent.VK_S, null);
+        foregroundColorItem = createMenuItem("Text Color", KeyEvent.VK_T, null);
+        backgroundColorItem = createMenuItem("Background Color", KeyEvent.VK_B, null);
+        wrapItem = new JCheckBoxMenuItem("Text Wrap");
+        wrapItem.setMnemonic(KeyEvent.VK_W);
+        wrapItem.setSelected(true);
         wrapItem.addActionListener(this);
         
         var caseTweakingSubMenu = new JMenu("Case Tweaking");
-        var decorationSubMenu = new JMenu("Decoration");
+        var decorationSubMenu = new JMenu("Text Style");
         
-        titleCaseItem = new JMenuItem("Title Case");
-        upperCaseItem = new JMenuItem("Upper Case");
-        lowerCaseItem = new JMenuItem("Lower Case");
-        boldTextItem = new JRadioButtonMenuItem("Bold Text");
-        italicTextItem = new JRadioButtonMenuItem("Italic Text");
-        plainTextItem = new JRadioButtonMenuItem("Plain Text");
+        titleCaseItem = createMenuItem("Title Case", KeyEvent.VK_T, null);
+        upperCaseItem = createMenuItem("Upper Case", KeyEvent.VK_U, null);
+        lowerCaseItem = createMenuItem("Lower Case", KeyEvent.VK_L, null);
+        boldTextItem = new JRadioButtonMenuItem("Bold");
+        italicTextItem = new JRadioButtonMenuItem("Italic");
+        plainTextItem = new JRadioButtonMenuItem("Plain");
         
         var decorationButtons = new ButtonGroup();
         decorationButtons.add(boldTextItem);
         decorationButtons.add(italicTextItem);
         decorationButtons.add(plainTextItem);
                 
-        titleCaseItem.addActionListener(this);
-        upperCaseItem.addActionListener(this);
-        lowerCaseItem.addActionListener(this);
         boldTextItem.addActionListener(this);
         italicTextItem.addActionListener(this);
         plainTextItem.addActionListener(this);
@@ -300,21 +327,14 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
         formatMenu.add(decorationSubMenu);
         formatMenu.add(wrapItem);
         
-        popupUndoItem = new JMenuItem("Undo");
-        popupRedoItem = new JMenuItem("Redo");
-        popupCutItem = new JMenuItem("Cut");
-        popupCopyItem = new JMenuItem("Copy");
-        popupPasteItem = new JMenuItem("Paste");
-        popupDeleteItem = new JMenuItem("Delete");
-        popupSelectAllItem = new JMenuItem("Select All");
-        
-        popupCopyItem.addActionListener(this);
-        popupCutItem.addActionListener(this);
-        popupDeleteItem.addActionListener(this);
-        popupPasteItem.addActionListener(this);
-        popupSelectAllItem.addActionListener(this);
-        popupRedoItem.addActionListener(this);
-        popupUndoItem.addActionListener(this);
+        // Context Menu (Right-click)
+        popupUndoItem = createMenuItem("Undo", 0, null);
+        popupRedoItem = createMenuItem("Redo", 0, null);
+        popupCutItem = createMenuItem("Cut", 0, null);
+        popupCopyItem = createMenuItem("Copy", 0, null);
+        popupPasteItem = createMenuItem("Paste", 0, null);
+        popupDeleteItem = createMenuItem("Delete", 0, null);
+        popupSelectAllItem = createMenuItem("Select All", 0, null);
         
         rightClickMenu.add(popupUndoItem);
         rightClickMenu.add(popupRedoItem);
@@ -333,11 +353,29 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
         popupDeleteItem.setEnabled(false);
         popupSelectAllItem.setEnabled(false);
         
-        aboutItem = new JMenuItem("About TextEditor");
-        aboutItem.addActionListener(this);
+        // Help Menu
+        var helpMenu = new JMenu("Help");
+        helpMenu.setMnemonic(KeyEvent.VK_H);
+        aboutItem = createMenuItem("About TextEditor", KeyEvent.VK_A, null);
         helpMenu.add(aboutItem);
+        menuBar.add(helpMenu);
         
         return menuBar;
+    }
+    
+    /**
+     * Helper method to create menu items with modern keyboard shortcuts.
+     */
+    private JMenuItem createMenuItem(String text, int mnemonic, KeyStroke accelerator) {
+        var item = new JMenuItem(text);
+        if (mnemonic != 0) {
+            item.setMnemonic(mnemonic);
+        }
+        if (accelerator != null) {
+            item.setAccelerator(accelerator);
+        }
+        item.addActionListener(this);
+        return item;
     }
 
     @Override
@@ -357,9 +395,9 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
             case "Lower Case" -> handleLowerCase();
             case "Upper Case" -> handleUpperCase();
             case "Text Wrap" -> handleTextWrap();
-            case "Bold Text" -> handleBoldText();
-            case "Italic Text" -> handleItalicText();
-            case "Plain Text" -> handlePlainText();
+            case "Bold" -> handleBoldText();
+            case "Italic" -> handleItalicText();
+            case "Plain" -> handlePlainText();
             case "Date & Time" -> handleDateTime();
             case "Open" -> handleOpen();
             case "Save" -> handleSave();
@@ -369,6 +407,7 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
             case "Background Color" -> handleBackgroundColor();
             case "Font" -> handleFont();
             case "Size" -> handleSize();
+            default -> { /* Unknown command */ }
         }
     }
     
@@ -453,16 +492,52 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
     }
     
     private void handleAbout() {
-        var aboutDialog = new JDialog();
-        var aboutLabel = new JLabel("<html><body style='width:300;text-align:justify'><p>This is a modern Java text editor "
-                + "with full editing capabilities including text formatting, undo/redo, and file operations. "
-                + "It has been modernized to use Java 17 features and Maven build system. "
-                + "Created by Keyur Golani and modernized for current Java standards.</p></body></html>");
-        aboutDialog.setSize(350, 300);
-        aboutDialog.setTitle(">>>Created By Keyur Golani<<<");
-        aboutDialog.add(aboutLabel);
+        var aboutDialog = new JDialog(this, "About TextEditor", true);
+        aboutDialog.setLayout(new BorderLayout(10, 10));
+        aboutDialog.setSize(400, 250);
+        aboutDialog.setResizable(false);
+        
+        // Create content panel with modern layout
+        var contentPanel = new JPanel();
+        contentPanel.setLayout(new BoxLayout(contentPanel, BoxLayout.Y_AXIS));
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        
+        var titleLabel = new JLabel("TextEditor");
+        titleLabel.setFont(new Font("SansSerif", Font.BOLD, 24));
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        var versionLabel = new JLabel("Version 2.0 - Modernized Edition");
+        versionLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        versionLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        var descLabel = new JLabel("<html><div style='text-align: center; padding: 10px;'>"
+                + "A modern Java text editor with full editing capabilities<br>"
+                + "including text formatting, undo/redo, and file operations.<br><br>"
+                + "Built with Java 17+ and Maven</div></html>");
+        descLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        var authorLabel = new JLabel("Created by Keyur Golani");
+        authorLabel.setFont(new Font("SansSerif", Font.ITALIC, 12));
+        authorLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        contentPanel.add(titleLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        contentPanel.add(versionLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        contentPanel.add(descLabel);
+        contentPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+        contentPanel.add(authorLabel);
+        
+        // Add close button with modern style
+        var buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        var closeButton = new JButton("Close");
+        closeButton.setPreferredSize(new Dimension(100, 30));
+        closeButton.addActionListener(e -> aboutDialog.dispose());
+        buttonPanel.add(closeButton);
+        
+        aboutDialog.add(contentPanel, BorderLayout.CENTER);
+        aboutDialog.add(buttonPanel, BorderLayout.SOUTH);
         aboutDialog.setLocationRelativeTo(this);
-        aboutDialog.setModal(true);
         aboutDialog.setVisible(true);
     }
     
@@ -661,21 +736,32 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
     }
     
     private void handleFont() {
-        String selectedFont = new FontChooser(this, textArea.getFont()).getSelectedFont();
-        textArea.setFont(new Font(selectedFont, textArea.getFont().getStyle(), textArea.getFont().getSize()));
+        var fontChooser = new FontChooser(this, textArea.getFont());
+        var selectedFont = fontChooser.getSelectedFont();
+        if (selectedFont != null) {
+            textArea.setFont(new Font(selectedFont, textArea.getFont().getStyle(), textArea.getFont().getSize()));
+        }
     }
     
     private void handleSize() {
-        int selectedFontSize = new FontSizeChooser(this, textArea.getFont()).getSelectedSize();
-        textArea.setFont(new Font(textArea.getFont().getName(), textArea.getFont().getStyle(), selectedFontSize));
+        var fontSizeChooser = new FontSizeChooser(this, textArea.getFont());
+        var selectedFontSize = fontSizeChooser.getSelectedSize();
+        if (selectedFontSize > 0) {
+            textArea.setFont(new Font(textArea.getFont().getName(), textArea.getFont().getStyle(), selectedFontSize));
+        }
     }
     
     private String convertToTitleCase(String actualText) {
+        if (actualText == null || actualText.isEmpty()) {
+            return actualText;
+        }
         var text = new StringBuilder(actualText.toLowerCase());
-        text.setCharAt(0, (char)(text.charAt(0) - 32));
+        // Capitalize first character
+        text.setCharAt(0, Character.toUpperCase(text.charAt(0)));
+        // Capitalize first character after spaces
         for (int i = 1; i < text.length(); i++) {
             if (text.charAt(i - 1) == ' ' && text.charAt(i) != ' ') {
-                text.setCharAt(i, (char)(text.charAt(i) - 32));
+                text.setCharAt(i, Character.toUpperCase(text.charAt(i)));
             }
         }
         return text.toString();
@@ -684,28 +770,5 @@ public class TextEditor extends JFrame implements ActionListener, ClipboardOwner
     @Override
     public void lostOwnership(Clipboard clipboard, Transferable contents) {
         // Not implemented - clipboard ownership is not critical for this application
-    }
-
-    @Override
-    public void componentResized(ComponentEvent e) {
-        window = getBounds();
-        textAreaScrollPane.setBounds(0, 30, window.width - 16, window.height - 30 - 39);
-        textArea.setBounds(0, 30, window.width, window.height);
-        menuBar.setBounds(0, 0, window.width, 30);
-    }
-
-    @Override
-    public void componentMoved(ComponentEvent e) {
-        // Not needed
-    }
-
-    @Override
-    public void componentShown(ComponentEvent e) {
-        // Not needed
-    }
-
-    @Override
-    public void componentHidden(ComponentEvent e) {
-        // Not needed
     }
 }
