@@ -1,75 +1,94 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package texteditordemo;
 
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JList;
-import javax.swing.JScrollPane;
-import javax.swing.ListSelectionModel;
+import java.awt.*;
+import javax.swing.*;
 
 /**
+ * Modern dialog for selecting font sizes.
  *
  * @author Keyur
  */
-public class FontSizeChooser extends JDialog implements ActionListener {
+public class FontSizeChooser extends JDialog {
     
-    JList sizeList;
-    Integer[] sizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72};
-    static int selectedSize;
-    static int previousSize;
+    private final JList<Integer> sizeList;
+    private final Integer[] sizes = {8, 9, 10, 11, 12, 14, 16, 18, 20, 22, 24, 26, 28, 36, 48, 72};
+    private int selectedSize;
+    private final int previousSize;
 
     public FontSizeChooser(JFrame parent, Font previousFont) {
-        previousSize = previousFont.getSize();
-        setLayout(null);
-        setSize(200, 400);
-        setModal(true);
+        super(parent, "Choose Font Size", true);
+        this.previousSize = previousFont.getSize();
+        this.selectedSize = this.previousSize;
+        
+        // Use modern layout manager instead of null layout
+        setLayout(new BorderLayout(10, 10));
+        setSize(300, 500);
         setResizable(false);
-        setTitle("Choose Font");
         setLocationRelativeTo(parent);
         
-        sizeList = new JList(sizes);
+        // Create size list with modern styling
+        sizeList = new JList<>(sizes);
         sizeList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         sizeList.setLayoutOrientation(JList.VERTICAL);
         sizeList.setVisibleRowCount(-1);
-        JScrollPane sizeScrollPane = new JScrollPane(sizeList);
-        sizeScrollPane.setBounds(0, 0, 194, 250);
-        add(sizeScrollPane);
+        sizeList.setFont(new Font("SansSerif", Font.PLAIN, 14));
         
-        JButton okButton = new JButton("OK");
-        okButton.addActionListener(this);
-        okButton.setBounds(47, 270, 100, 30);
-        add(okButton);
+        // Set initial selection to current size
+        for (int i = 0; i < sizes.length; i++) {
+            if (sizes[i] == previousSize) {
+                sizeList.setSelectedIndex(i);
+                sizeList.ensureIndexIsVisible(i);
+                break;
+            }
+        }
         
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(this);
-        cancelButton.setBounds(47, 320, 100, 30);
-        add(cancelButton);
+        // Add custom cell renderer to show size preview
+        sizeList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, 
+                    int index, boolean isSelected, boolean cellHasFocus) {
+                var label = (JLabel) super.getListCellRendererComponent(
+                    list, value + " pt", index, isSelected, cellHasFocus);
+                label.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+                return label;
+            }
+        });
+        
+        var sizeScrollPane = new JScrollPane(sizeList);
+        sizeScrollPane.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        add(sizeScrollPane, BorderLayout.CENTER);
+        
+        // Create button panel with modern layout
+        var buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        
+        var okButton = new JButton("OK");
+        okButton.setPreferredSize(new Dimension(100, 35));
+        okButton.addActionListener(e -> {
+            var selected = sizeList.getSelectedValue();
+            if (selected != null) {
+                selectedSize = selected;
+            }
+            setVisible(false);
+        });
+        
+        var cancelButton = new JButton("Cancel");
+        cancelButton.setPreferredSize(new Dimension(100, 35));
+        cancelButton.addActionListener(e -> {
+            selectedSize = previousSize;
+            setVisible(false);
+        });
+        
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Set OK as default button
+        getRootPane().setDefaultButton(okButton);
         
         setVisible(true);
     }
     
-    public static int getSelectedSize() {
+    public int getSelectedSize() {
         return selectedSize;
     }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        if(e.getActionCommand().equals("OK")) {
-            selectedSize = (int)sizeList.getSelectedValue();
-            this.setVisible(false);
-        }
-        else {
-            selectedSize = previousSize;
-            this.setVisible(false);
-        }
-    }
-    
-    
 }
