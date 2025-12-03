@@ -1,38 +1,28 @@
 package texteditordemo;
 
-
 import java.awt.Font;
 import java.awt.GraphicsEnvironment;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JScrollPane;
-import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
-import javax.swing.text.Utilities;
-
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 
 /**
+ * Dialog for selecting font families.
  *
  * @author Keyur
  */
-public class FontChooser extends JDialog implements ActionListener {
+public class FontChooser extends JDialog {
     
-    JList fontList;
-    static String selectedFont;
-    static String previousFont;
+    private final JList<String> fontList;
+    private static String selectedFont;
+    private static String previousFont;
 
     public FontChooser(JFrame parent, Font previousFont) {
-        this.previousFont = previousFont.getName();
+        FontChooser.previousFont = previousFont.getName();
         setLayout(null);
         setSize(400, 400);
         setModal(true);
@@ -40,51 +30,40 @@ public class FontChooser extends JDialog implements ActionListener {
         setTitle("Choose Font");
         setLocationRelativeTo(parent);
         
-        DefaultListModel<String> fontListModel = new DefaultListModel<String>();
-        fontList = new JList(fontListModel);
-        GraphicsEnvironment e = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        String[] fonts = e.getAvailableFontFamilyNames();
-        for(String s : fonts) {
-            fontListModel.addElement(s);
+        var fontListModel = new DefaultListModel<String>();
+        fontList = new JList<>(fontListModel);
+        var graphicsEnvironment = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        String[] fonts = graphicsEnvironment.getAvailableFontFamilyNames();
+        for (String font : fonts) {
+            fontListModel.addElement(font);
         }
         fontList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         fontList.setLayoutOrientation(JList.VERTICAL);
         fontList.setVisibleRowCount(-1);
-        JScrollPane fontScrollPane = new JScrollPane(fontList);
+        var fontScrollPane = new JScrollPane(fontList);
         fontScrollPane.setBounds(10, 10, 374, 301);
         add(fontScrollPane);
         
-        JButton okButton = new JButton("OK");
-        okButton.addActionListener(this);
+        var okButton = new JButton("OK");
+        okButton.addActionListener(e -> {
+            selectedFont = fontList.getSelectedValue();
+            setVisible(false);
+        });
         okButton.setBounds(50, 326, 100, 30);
         add(okButton);
         
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(this);
+        var cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> {
+            selectedFont = FontChooser.previousFont;
+            setVisible(false);
+        });
         cancelButton.setBounds(224, 326, 100, 30);
         add(cancelButton);
         
         setVisible(true);
-        
-    }
-
-    @Override
-    public void actionPerformed(ActionEvent e) {
-        if(e.getActionCommand().equals("Cancel")) {
-            selectedFont = previousFont;
-            this.setVisible(false);
-        }
-        else {
-            selectedFont = (String)fontList.getSelectedValue();
-            this.setVisible(false);
-        }
     }
     
     public static String getSelectedFont() {
         return selectedFont;
     }
-    
-    
-    
-    
 }
